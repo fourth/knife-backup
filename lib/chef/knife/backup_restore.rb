@@ -165,7 +165,12 @@ module ServerBackup
         full_path = File.join(File.dirname(full_cb), cookbook)
 
         begin
-          File.symlink(full_cb, full_path)
+          require 'fileutils'
+          puts full_cb
+          puts full_path
+
+          FileUtils.cp_r( full_cb+"/.",  full_path)
+
           cbu = Chef::Knife::CookbookUpload.new
           Chef::Knife::CookbookUpload.load_deps
           cbu.name_args = [ cookbook ]
@@ -175,7 +180,7 @@ module ServerBackup
         rescue Net::HTTPServerException => e
           handle_error 'cookbook', cb_name, e
         ensure
-          File.unlink(full_path)
+          delete_all(full_path)
         end
       end
     end
@@ -190,6 +195,19 @@ module ServerBackup
       else
         ui.error "Failed to create #{thing}: #{error.response}; skipping"
       end
+    end
+
+    def delete_all(dir)
+      Dir.foreach(dir) do |e|
+        next if [".",".."].include? e
+        fullname = dir + File::Separator + e
+        if FileTest::directory?(fullname)
+          delete_all(fullname)
+        else
+          File.delete(fullname)
+        end
+      end
+      Dir.delete(dir)
     end
 
   end
